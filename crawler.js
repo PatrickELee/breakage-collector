@@ -161,6 +161,61 @@ async function getSiteData(context, url, {
     // Create a new page in a pristine context.
     const page = await context.newPage();
 
+    // await page.setRequestInterception(true);
+    // page.on('request', request => {
+        // Remove ALL query parameters
+        // request.continue({url: request.url().split('?')[0]});
+
+        // Remove all third party query parameters
+        // if(request.url().indexOf(url.host) === -1) {
+        //     request.continue({url: request.url().split('?')[0]});
+        // } else {
+        //     request.continue();
+        // }
+
+        // Replace all third party query parameters
+        // if(request.url().indexOf(url.host) === -1) {
+        //     let requestUrl = request.url();
+        //     let queryParamsIndex = requestUrl.indexOf('?');
+        //     if(queryParamsIndex === -1) {
+        //         request.continue();
+        //     } else {
+        //         let readingKeyName = true;
+        //         let newUrl = requestUrl.substring(0, queryParamsIndex);
+        //         let overallOptions = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        //         for (let i = queryParamsIndex; i < requestUrl.length; i++) {
+        //             if(requestUrl[i] == '=') {
+        //                 readingKeyName = false;
+        //             } else if(!readingKeyName && requestUrl[i] == '&') {
+        //                 readingKeyName = true;
+        //             }
+        //             if(overallOptions.indexOf(requestUrl[i]) === -1 || readingKeyName) {
+        //                 newUrl += requestUrl[i];
+        //             } else {
+        //                 let curChar = requestUrl[i];
+        //                 let options = '';
+        //                 if((curChar >= 'A' && curChar <= 'Z') || (curChar >= 'a' && curChar <= 'z')) {
+        //                     options += 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        //                 } else if(curChar >= '0' && curChar <= '9') {
+        //                     options += '0123456789';
+        //                 }
+        //                 // } else if (curChar >= '!' && curChar <= '/') {
+        //                 //     options = '!"#$%&\'()*+,-./';
+        //                 // }
+        //                 let randomChar = options[Math.floor(Math.random() * options.length)];
+        //                 newUrl += randomChar;
+        //             }
+        //         }
+        //         log(newUrl);
+        //         request.continue({
+        //             url: newUrl
+        //         });
+        //     }
+        // } else {
+        //     request.continue();
+        // }
+    // });
+
     // optional function that should be run on every page (and subframe) in the browser context
     if (runInEveryFrame) {
         page.evaluateOnNewDocument(runInEveryFrame);
