@@ -1,5 +1,5 @@
 set -x  # uncomment to debug
-# Usage:
+# Usage: ./crawl_in_parts.sh ./to_crawl ./data ./log
 
 URL_PARTS_DIR=$1  # all URLS must be in this dir, split into multiple CSVs
 OUTDIR=$2  # out data dir

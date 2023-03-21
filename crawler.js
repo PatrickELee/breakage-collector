@@ -1,4 +1,7 @@
 /* eslint-disable max-lines */
+const path = require('path');
+const fs = require('fs');
+const pageUtils = require('./helpers/utils');
 const puppeteer = require('puppeteer');
 const chalk = require('chalk').default;
 const {createTimer} = require('./helpers/timer');
@@ -7,6 +10,7 @@ const tldts = require('tldts');
 
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36';
 const MOBILE_USER_AGENT = 'Mozilla/5.0 (Linux; Android 10; Pixel 2 XL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Mobile Safari/537.36';
+const SAVE_HOMEPAGE_HTML = true
 
 const DEFAULT_VIEWPORT = {
     width: 1440,//px
@@ -20,6 +24,8 @@ const MOBILE_VIEWPORT = {
     hasTouch: true
 };
 
+const ENABLE_CMP_EXTENSION = true;
+const CMP_ACTION = 'NO_ACTION';
 // for debugging: will lunch in window mode instad of headless, open devtools and don't close windows after process finishes
 const VISUAL_DEBUG = false;
 
@@ -65,7 +71,7 @@ function openBrowser(log, proxyHost, executablePath) {
 /**
  * @param {puppeteer.BrowserContext} context
  * @param {URL} url
- * @param {{collectors: import('./collectors/BaseCollector')[], log: function(...any):void, urlFilter: function(string, string):boolean, emulateMobile: boolean, emulateUserAgent: boolean, runInEveryFrame: function():void, maxLoadTimeMs: number, extraExecutionTimeMs: number, collectorFlags: Object.<string, string>}} data
+ * @param {{collectors: import('./collectors/BaseCollector')[], log: function(...any):void, urlFilter: function(string, string):boolean, emulateMobile: boolean, emulateUserAgent: boolean, runInEveryFrame: function():void, maxLoadTimeMs: number, extraExecutionTimeMs: number, collectorFlags: Object.<string, string>, outputPath:string}} data
  *
  * @returns {Promise<CollectResult>}
  */
@@ -79,6 +85,7 @@ async function getSiteData(context, url, {
     maxLoadTimeMs,
     extraExecutionTimeMs,
     collectorFlags,
+    outputPath
 }) {
     const testStarted = Date.now();
 
@@ -252,6 +259,7 @@ async function getSiteData(context, url, {
     page.on('error', e => log(chalk.red(e.message)));
 
     let timeout = false;
+    const loadPageTimer = createTimer();
 
     try {
         await page.goto(url.toString(), {timeout: maxLoadTimeMs, waitUntil: 'networkidle0'});
@@ -271,6 +279,30 @@ async function getSiteData(context, url, {
         }
     }
 
+    // give website a bit more time for things to settle
+    await page.waitForTimeout(extraExecutionTimeMs);
+    const finalUrl = page.url();
+    const urlStr = url.toString();
+    log(`Loaded ${urlStr} in ${loadPageTimer.getElapsedTime()}s (finalUrl: ${finalUrl})`);
+
+    if(SAVE_HOMEPAGE_HTML) {
+        const filePathForHTML = path.join(outputPath, `${url.hostname}_after_page_load`);
+        let bodyHTML = await page.evaluate(() => document.body.innerHTML);
+        fs.writeFileSync(filePathForHTML + '.html', bodyHTML);
+    }
+    if(ENABLE_CMP_EXTENSION) {
+        try {
+            await pageUtils.findCMP(page, log, CMP_ACTION);
+        } catch (error) {
+            log('Error while detecting CMP', error.message);
+        }
+    }
+    /**
+     * @type {Object<string, Object>}
+     */
+    const data = {};
+
+
     for (let collector of collectors) {
         const postLoadTimer = createTimer();
         try {
@@ -284,12 +316,6 @@ async function getSiteData(context, url, {
 
     // give website a bit more time for things to settle
     await page.waitForTimeout(extraExecutionTimeMs);
-
-    const finalUrl = page.url();
-    /**
-     * @type {Object<string, Object>}
-     */
-    const data = {};
 
     for (let collector of collectors) {
         const getDataTimer = createTimer();
@@ -343,7 +369,7 @@ function isThirdPartyRequest(documentUrl, requestUrl) {
 
 /**
  * @param {URL} url
- * @param {{collectors?: import('./collectors/BaseCollector')[], log?: function(...any):void, filterOutFirstParty?: boolean, emulateMobile?: boolean, emulateUserAgent?: boolean, proxyHost?: string, browserContext?: puppeteer.BrowserContext, runInEveryFrame?: function():void, executablePath?: string, maxLoadTimeMs?: number, extraExecutionTimeMs?: number, collectorFlags?: Object.<string, string>}} options
+ * @param {{collectors?: import('./collectors/BaseCollector')[], log?: function(...any):void, filterOutFirstParty?: boolean, emulateMobile?: boolean, emulateUserAgent?: boolean, proxyHost?: string, browserContext?: puppeteer.BrowserContext, runInEveryFrame?: function():void, executablePath?: string, maxLoadTimeMs?: number, extraExecutionTimeMs?: number, collectorFlags?: Object.<string, string>, outputPath:string}} options
  * @returns {Promise<CollectResult>}
  */
 module.exports = async (url, options) => {
@@ -368,7 +394,8 @@ module.exports = async (url, options) => {
             runInEveryFrame: options.runInEveryFrame,
             maxLoadTimeMs,
             extraExecutionTimeMs,
-            collectorFlags: options.collectorFlags
+            collectorFlags: options.collectorFlags,
+            outputPath: options.outputPath
         }), maxTotalTimeMs);
     } catch(e) {
         log(chalk.red('Crawl failed'), e.message, chalk.gray(e.stack));
