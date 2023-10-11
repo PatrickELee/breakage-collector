@@ -5,11 +5,11 @@ const chalk = require('chalk').default;
 const runCrawlers = require('../crawlerConductor');
 const program = require('commander');
 const URL = require('url').URL;
-const {getCollectorIds, createCollector} = require('../helpers/collectorsList');
-const {getReporterIds, createReporter} = require('../helpers/reportersList');
-const {metadataFileExists, createMetadataFile} = require('./metadataFile');
+const { getCollectorIds, createCollector } = require('../helpers/collectorsList');
+const { getReporterIds, createReporter } = require('../helpers/reportersList');
+const { metadataFileExists, createMetadataFile } = require('./metadataFile');
 const crawlConfig = require('./crawlConfig');
-const {createUniqueUrlName} = require('../helpers/hash');
+const { createUniqueUrlName } = require('../helpers/hash');
 
 // eslint-disable-next-line no-unused-vars
 const BaseCollector = require('../collectors/BaseCollector');
@@ -34,6 +34,8 @@ program
     .option('--config <path>', 'crawl configuration file')
     .option('--autoconsent-action <action>', 'dismiss cookie popups. Possible values: optout, optin')
     .option('--chromium-version <version_number>', 'use custom version of chromium')
+    .option('-q, --blocking-method <method>', 'quuery parameter replacement/blocking method')
+    .option('-s, specific-requests <requests>', 'comma separated list of specific requests to block for a given site')
     .parse(process.argv);
 
 /**
@@ -53,13 +55,15 @@ program
  * @param {string} chromiumVersion
  * @param {number} maxLoadTimeMs
  * @param {number} extraExecutionTimeMs
+ * @param {string} blockingMethod
+ * @param {string} specificRequests
  * @param {Object.<string, boolean>} collectorFlags
  */
-async function run(inputUrls, outputPath, verbose, logPath, numberOfCrawlers, dataCollectors, reporters, forceOverwrite, filterOutFirstParty, emulateMobile, proxyHost, regionCode, antiBotDetection, chromiumVersion, maxLoadTimeMs, extraExecutionTimeMs, collectorFlags) {
+async function run(inputUrls, outputPath, verbose, logPath, numberOfCrawlers, dataCollectors, reporters, forceOverwrite, filterOutFirstParty, emulateMobile, proxyHost, regionCode, antiBotDetection, chromiumVersion, maxLoadTimeMs, extraExecutionTimeMs, blockingMethod, specificRequests, collectorFlags) {
     const startTime = new Date();
 
     reporters.forEach(reporter => {
-        reporter.init({verbose, startTime, urls: inputUrls.length, logPath});
+        reporter.init({ verbose, startTime, urls: inputUrls.length, logPath });
     });
 
     /**
@@ -88,7 +92,7 @@ async function run(inputUrls, outputPath, verbose, logPath, numberOfCrawlers, da
 
         try {
             url = new URL(urlString);
-        } catch(e) {
+        } catch (e) {
             log(chalk.yellow('Invalid URL:'), urlString);
             return false;
         }
@@ -118,11 +122,11 @@ async function run(inputUrls, outputPath, verbose, logPath, numberOfCrawlers, da
      * @type {Array<Array<number>>}
      */
     let crawlTimes = [];
-    
+
     // eslint-disable-next-line arrow-parens
     const updateProgress = (/** @type {string} */site = '', /** @type {import('../crawler').CollectResult} */data) => {
         reporters.forEach(reporter => {
-            reporter.update({site, successes, failures, urls: urlsLength, data, crawlTimes, fatalError, numberOfCrawlers, regionCode});
+            reporter.update({ site, successes, failures, urls: urlsLength, data, crawlTimes, fatalError, numberOfCrawlers, regionCode });
         });
     };
 
@@ -174,17 +178,18 @@ async function run(inputUrls, outputPath, verbose, logPath, numberOfCrawlers, da
             maxLoadTimeMs,
             extraExecutionTimeMs,
             collectorFlags,
-            outputPath
+            blockingMethod,
+            specificRequests,
         });
         log(chalk.green('\n✅ Finished successfully.'));
-    } catch(e) {
+    } catch (e) {
         log(chalk.red('\n🚨 Fatal error.'), e);
         fatalError = e;
     }
 
     const endTime = new Date();
 
-    await Promise.all(reporters.map(reporter => reporter.cleanup({endTime, successes, failures, urls: urlsLength})));
+    await Promise.all(reporters.map(reporter => reporter.cleanup({ endTime, successes, failures, urls: urlsLength })));
 
     createMetadataFile(outputPath, {
         startTime,
@@ -254,9 +259,9 @@ if (!config.urls || !config.output) {
                 dataCollectors: item.dataCollectors.map(id => createCollector(id))
             };
         }
-        
+
         return item;
     });
 
-    run(urls, config.output, config.verbose, config.logPath, config.crawlers || null, dataCollectors, reporters, config.forceOverwrite, config.filterOutFirstParty, config.emulateMobile, config.proxyConfig, config.regionCode, !config.disableAntiBot, config.chromiumVersion, config.maxLoadTimeMs, config.extraExecutionTimeMs, collectorFlags);
+    run(urls, config.output, config.verbose, config.logPath, config.crawlers || null, dataCollectors, reporters, config.forceOverwrite, config.filterOutFirstParty, config.emulateMobile, config.proxyConfig, config.regionCode, !config.disableAntiBot, config.chromiumVersion, config.maxLoadTimeMs, config.extraExecutionTimeMs, config.blockingMethod, config.specificRequests, collectorFlags);
 }
