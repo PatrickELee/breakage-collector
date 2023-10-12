@@ -7,8 +7,6 @@ const chalk = require('chalk').default;
 const { createTimer } = require('./helpers/timer');
 const wait = require('./helpers/wait');
 const tldts = require('tldts');
-const path = require('path');
-const fs = require('fs');
 
 
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36';
@@ -30,7 +28,7 @@ const MOBILE_VIEWPORT = {
 const ENABLE_CMP_EXTENSION = true;
 const CMP_ACTION = 'NO_ACTION';
 // for debugging: will lunch in window mode instad of headless, open devtools and don't close windows after process finishes
-const VISUAL_DEBUG = false;
+const VISUAL_DEBUG = true;
 
 /**
  * @param {function(...any):void} log
@@ -257,6 +255,7 @@ async function getSiteData(context, url, {
       } else {
         // let finalTime = performance.now() - pageInitTime;
         // log(finalTime);
+        console.log("Here");
 
         request.continue();
 

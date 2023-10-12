@@ -29,7 +29,6 @@ const MAX_NUMBER_OF_RETRIES = 2;
  * @param {string} blockingMethod
  * @param {string} specificRequests
  * @param {Object.<string, string>} collectorFlags
- * @param {string} outputPath
  */
 async function crawlAndSaveData(urlString, dataCollectors, log, filterOutFirstParty, dataCallback, emulateMobile, proxyHost, antiBotDetection, executablePath, maxLoadTimeMs, extraExecutionTimeMs, blockingMethod, specificRequests, collectorFlags) {
     const url = new URL(urlString);
@@ -52,7 +51,6 @@ async function crawlAndSaveData(urlString, dataCollectors, log, filterOutFirstPa
         blockingMethod,
         specificRequests,
         collectorFlags,
-        outputPath
     });
 
     dataCallback(url, data);
@@ -100,6 +98,7 @@ module.exports = async options => {
 
         async.retry(MAX_NUMBER_OF_RETRIES, task, err => {
             if (err) {
+                console.log(err);
                 log(chalk.red(`Max number of retries (${MAX_NUMBER_OF_RETRIES}) exceeded for "${urlString}".`));
                 failureCallback(urlString, err);
             } else {

@@ -10,8 +10,8 @@ import json
 import shutil
 import collections
 
-MAX_PROCESSES = 38
-MAX_SPECIFIC_PROCESSES = 38
+MAX_PROCESSES = 1
+MAX_SPECIFIC_PROCESSES = 1
 
 def crawl(target=None, csv=None, site=None, rules=None):
   if target == 'specific':
@@ -49,7 +49,6 @@ def main():
   parser.add_argument('-c', '--csv', help='Name of the CSV if desired to be used for specific site checking')
   
   args = parser.parse_args()
-
 
   if args.target == 'specific':
     if args.csv:
