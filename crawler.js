@@ -280,7 +280,10 @@ async function getSiteData(context, url, {
       const countSearchParams = new URLSearchParams(countUrl.search);
 
       numDecorations += [...new Set(countSearchParams.keys())].length;
-      numDecorations += cur_url.split('/').length - 3
+      numDecorations += cur_url.split('/').length - 3;
+
+      // console.log("Hello");
+      // console.log(decorations);
 
       for (let decoration of decorations) {
         // console.log(decoration);
@@ -298,10 +301,11 @@ async function getSiteData(context, url, {
               // If: Is fragment
               if (separated[1] === 'fragment') {
                 if (cur_url.indexOf('#') != -1) {
-                  // console.log('Blocking specific request fragment for url ' + cur_url)
+                  console.log('Blocking specific request fragment for url ' + cur_url)
                   cur_url = cur_url.split('#')[0];
                   foundDecorationInLink = true;
                   numDecorationsModified += 1;
+
                 }
 
                 // Else: Is query parameter
@@ -314,7 +318,7 @@ async function getSiteData(context, url, {
                   // console.log('Attempting to modify');
                   searchParams.set(separated[1], 'TUVWXYZ');
                   const new_url = new URL(`${url.origin}${url.pathname}?${searchParams}`);
-                  // console.log('Blocking specific request query parameter for url ' + cur_url + ', changing to ' + new_url.href);
+                  console.log('Blocking specific request query parameter for url ' + cur_url + ', changing to ' + new_url.href);
                   cur_url = new_url.href;
                   foundDecorationInLink = true;
                   numDecorationsModified += 1;
@@ -346,24 +350,26 @@ async function getSiteData(context, url, {
                   newRequestUrl += '?';
                   newRequestUrl += cur_url.split('?')[1];
                 }
-                // console.log('Blocking specific request path parameter for url ' + cur_url + ', changing to ' + newRequestUrl)
+                console.log('Blocking specific request path parameter for url ' + cur_url + ', changing to ' + newRequestUrl)
                 cur_url = newRequestUrl;
                 foundDecorationInLink = true;
                 numDecorationsModified += 1;
-
               }
             }
           }
         }
       }
       if (foundDecorationInLink) {
+        console.log('1a. Continuing request with ' + cur_url + ', original was ' + request.url());
         urlMaps.push([request.url(), cur_url]);
         numRequestsModified += 1;
-        // console.log('Continuing request with ' + cur_url + ', original was ' + request.url());
+        console.log('1b. Continuing request with ' + cur_url + ', original was ' + request.url());
       }
       const finalTime = performance.now() - initialTime;
       requestTimes.push(finalTime);
       request.continue({ url: cur_url });
+      // console.log('2. Continuing request with ' + cur_url + ', original was ' + request.url());
+
 
       // request.continue();
       // } else {

@@ -12,7 +12,7 @@ const BaseCollector = require('./collectors/BaseCollector');
 const notABot = require('./helpers/notABot');
 
 const MAX_NUMBER_OF_CRAWLERS = 38;// by trial and error there seems to be network bandwidth issues with more than 38 browsers. 
-const MAX_NUMBER_OF_RETRIES = 2;
+const MAX_NUMBER_OF_RETRIES = 3;
 
 /**
  * @param {string} urlString 
