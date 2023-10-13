@@ -71,7 +71,10 @@ def main():
     args = parser.parse_args()
 
     if args.target == "specific":
-        if args.csv:
+        if args.csv and args.site:
+            crawl_specific_from_csv_single_site(args.csv, args.site)
+        
+        elif args.csv:
             crawl_specific_from_csv(args.csv)
 
         elif args.site and args.rules:
@@ -99,6 +102,30 @@ def combine_key_values(dictionary):
     for key, value in dictionary.items():
         result.append([key] + list(value))
     return result
+
+def crawl_specific_from_csv_single_site(csv_file_name, site_name):
+    base_folder_name = f'{csv_file_name.split(".")[0]}_data'
+    urls_and_rule_to_crawl = collections.defaultdict(set)
+    with open(csv_file_name, "r") as f:
+        csv_reader = csv.reader(f)
+        count = 0
+        for site_url, decoration_name, rank in csv_reader:
+            if count == 0:
+                count += 1
+                continue
+            if site_name in site_url:
+                urls_and_rule_to_crawl[site_url].add(decoration_name)
+
+    if not os.path.isdir(base_folder_name):
+        os.mkdir(base_folder_name)
+
+    os.chdir(base_folder_name)
+
+    global base_directory
+    base_directory = os.getcwd()
+
+    p = multiprocessing.Pool(MAX_SPECIFIC_PROCESSES)
+    p.map(crawl_specific_site_conductor, combine_key_values(urls_and_rule_to_crawl))
 
 
 def crawl_specific_from_csv(csv_file_name):
