@@ -5,3 +5,4 @@ data/
 summary.json
 venv
 __pycache__/
+*data/
