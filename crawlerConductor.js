@@ -10,6 +10,9 @@ const downloadCustomChromium = require('./helpers/downloadCustomChromium');
 // eslint-disable-next-line no-unused-vars
 const BaseCollector = require('./collectors/BaseCollector');
 const notABot = require('./helpers/notABot');
+const readline = require("readline");
+const fs = require('fs');
+
 
 const MAX_NUMBER_OF_CRAWLERS = 38;// by trial and error there seems to be network bandwidth issues with more than 38 browsers. 
 const MAX_NUMBER_OF_RETRIES = 3;
@@ -90,6 +93,28 @@ module.exports = async options => {
         if ((typeof urlItem !== 'string') && urlItem.dataCollectors) {
             dataCollectors = urlItem.dataCollectors;
         }
+
+        const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+        let specificRequestsFile = options.specificRequests;
+        options.specificRequests = "";
+      
+        const fs = require('fs');
+
+        try {
+          const data = fs.readFileSync('single_decoration.txt', 'utf8');
+        //   console.log(data);
+          let decorations = data.split(/\r?\n/);
+          
+          for (let i = 0; i < decorations.length; i++) {
+            // console.log(decorations[i]);
+            options.specificRequests += String(decorations[i]) + ",";
+          }
+          options.specificRequests = options.specificRequests.replace(/^\,+|\,+$/g, '')
+        } catch (err) {
+          console.error(err);
+        }
+        
 
         log(chalk.cyan(`Processing entry #${Number(idx) + 1} (${urlString}).`));
         const timer = createTimer();

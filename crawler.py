@@ -13,7 +13,6 @@ import collections
 MAX_PROCESSES = 1
 MAX_SPECIFIC_PROCESSES = 1
 
-
 def crawl(target=None, csv=None, site=None, rules=None):
     if target == "specific":
         if csv:
@@ -78,8 +77,8 @@ def main():
             crawl_specific_from_csv(args.csv)
 
         elif args.site and args.rules:
-            print(args.site)
-            print(args.rules)
+            # print(args.site)
+            # print(args.rules)
             global base_directory
             base_directory = os.getcwd()
 
@@ -106,20 +105,40 @@ def combine_key_values(dictionary):
 def crawl_specific_from_csv_single_site(csv_file_name, site_name):
     base_folder_name = f'{csv_file_name.split(".")[0]}_data'
     urls_and_rule_to_crawl = collections.defaultdict(set)
+    cur_url = ""
     with open(csv_file_name, "r") as f:
         csv_reader = csv.reader(f)
         count = 0
-        for site_url, decoration_name, rank in csv_reader:
-            if count == 0:
-                count += 1
-                continue
-            if site_name in site_url:
-                urls_and_rule_to_crawl[site_url].add(decoration_name)
+        try:
+            for site_url, decoration_name, rank in csv_reader:
+                if count == 0:
+                    count += 1
+                    continue
+                if site_name in site_url:
+                    # print(decoration_name)
+                    urls_and_rule_to_crawl[site_url].add(decoration_name)
+                    cur_url = site_url
+        except ValueError as e:
+            for site_url, decoration_name in csv_reader:
+                if count == 0:
+                    count += 1
+                    continue
+                if site_name in site_url:
+                    # print(decoration_name)
+                    urls_and_rule_to_crawl[site_url].add(decoration_name)
+                    cur_url = site_url
+
+    with open('single_decoration.txt', "w") as f:
+        for decoration in urls_and_rule_to_crawl[cur_url]:
+            f.write(decoration + "\n")
+
+    urls_and_rule_to_crawl[cur_url] = set([csv_file_name])
 
     if not os.path.isdir(base_folder_name):
         os.mkdir(base_folder_name)
 
     os.chdir(base_folder_name)
+
 
     global base_directory
     base_directory = os.getcwd()
@@ -213,228 +232,52 @@ def crawl_specific_site_conductor(url_and_rule_to_crawl):
     error_found = False
 
     url_to_crawl = url_and_rule_to_crawl[0]
-    rules = url_and_rule_to_crawl[1:]
 
-    print(rules)
+
+    # print(rules)
 
     tld_obj = tldextract.extract(url_to_crawl)
     tld_string = tld_obj.domain + "." + tld_obj.suffix
 
-    if "" in rules and len(rules) == 1:
-        log_name = f"{tld_string}-log"
-        specific_folder_name = f"specific-data"
+    output_folder_name = f"{url_to_crawl}"
 
-        if not os.path.isdir(tld_string):
-            try:
-                os.mkdir(tld_string)
-            except FileExistsError as e:
-                print(e)
+    # print(os.listdir(os.getcwd()))
+    # print(f'Current working: {os.getcwd()}')
 
-        os.chdir(tld_string)
-
-        cur_folder = 0
-        cur_attempts = 0
-        crawls_since_last_success = 0
-
-        while not cur_folder and cur_attempts < 1:
-            # print(os.getcwd())
-            print(f"{tld_string} - Attempt {cur_attempts} / 5 - On folder {cur_folder}")
-
-            if crawls_since_last_success > 4:
-                break
-
-            cur_attempts += 1
-            crawls_since_last_success += 1
-            folder_name = f"specific-data"
-            already_have_cur_folder = False
-
-            if os.path.isdir(f"{os.getcwd()}/{folder_name}"):
-                files = os.listdir(f"{os.getcwd()}/{folder_name}")
-                for file in files:
-                    if tld_string in file:
-                        cur_folder += 1
-                        crawls_since_last_success = 0
-                        already_have_cur_folder = True
-                        print("Found blank specific data folder pre-existing")
-                        break
-
-            if already_have_cur_folder:
-                break
-
-            # print(folder_name)
-            os.system(
-                f'npm run crawl -- -u "{url_to_crawl}" -o {os.getcwd()}/{folder_name} -v -f -q none >> {os.getcwd()}/{log_name}'
-            )
-            try:
-                files = os.listdir(f"{os.getcwd()}/{folder_name}")
-            except FileNotFoundError as e:
-                print(f"Error in running blank crawl - {e}")
-                os.chdir(base_directory)
-
-                return
-            for file in files:
-                if tld_string in file:
-                    cur_folder += 1
-                    break
-
-        if cur_attempts == 5:
-            # to_delete = f'{os.getcwd()}/{folder_name}'
-            os.chdir(base_directory)
-            # if os.path.isdir(to_delete):
-            # shutil.rmtree(to_delete, ignore_errors=True)
-            return
-    else:
-        if "" in rules:
-            rules.remove("")
-        target_site_for_rule = [rule.split("||")[0] for rule in rules]
-
-        unix_friendly_rules = ["-".join(rule.split("|")) for rule in rules]
-
-        if ";" in unix_friendly_rules:
-            os.chdir(base_directory)
-
-        output_folder_name = f"{url_to_crawl}-{target_site_for_rule}"
-
-        # print(os.listdir(os.getcwd()))
-        # print(f'Current working: {os.getcwd()}')
-
-        if not os.path.isdir(tld_string):
-            # print(f'Making dir {url_to_crawl}')
-            try:
-                os.mkdir(tld_string)
-            except FileExistsError as e:
-                print(e)
-                # time.sleep(10)
-
-        os.chdir(tld_string)
-
+    if not os.path.isdir(tld_string):
+        # print(f'Making dir {url_to_crawl}')
         try:
-            # tld_obj = tldextract.extract(url_to_crawl)
-            # tld_string = tld_obj.domain + '.' + tld_obj.suffix
+            os.mkdir(tld_string)
+        except FileExistsError as e:
+            print(e)
+            # time.sleep(10)
 
-            log_name = f"{tld_string}-log"
-            specific_folder_name = f"specific-data"
+    os.chdir(tld_string)
 
-            crawl_succeeded = False
+    log_name = f"{tld_string}-log"
+    specific_folder_name = f"specific-data"
 
-            if os.path.isdir(
-                f"{os.getcwd()}/{specific_folder_name}"
-            ) and log_name in os.listdir(os.getcwd()):
-                with open(log_name, "rb", 0) as f, mmap.mmap(
-                    f.fileno(), 0, access=mmap.ACCESS_READ
-                ) as s:
-                    if (
-                        s.find(b"---------------------------------------------------")
-                        != -1
-                    ):
-                        crawl_succeeded = True
-                        print("Found pre-existing specific data folder")
+    crawl_succeeded = False
 
-            cur_attempts = 0
-            while cur_attempts < 1 and not crawl_succeeded:
-                cur_attempts += 1
-                print(
-                    f"{tld_string} - Attempt {cur_attempts} / 5 - On folder {specific_folder_name}"
-                )
+    if os.path.isdir(
+        f"{os.getcwd()}/{specific_folder_name}"
+    ) and log_name in os.listdir(os.getcwd()):
+        with open(log_name, "rb", 0) as f, mmap.mmap(
+            f.fileno(), 0, access=mmap.ACCESS_READ
+        ) as s:
+            if (
+                s.find(b"---------------------------------------------------")
+                != -1
+            ):
+                crawl_succeeded = True
+                print("Found pre-existing specific data folder")
 
-                rules_string = ",".join(rules)
-                # rules_string = rules_string.replace("|", "\|")
+    command = f'npm run crawl -- -u \"{url_to_crawl}\" -o {os.getcwd()}/{specific_folder_name} -v -f -q specific -s {url_and_rule_to_crawl[1]} >> {os.getcwd()}/{log_name}'
 
-                # print(rules_string)
-                # time.sleep(30)
-
-                os.system(
-                    f'npm run crawl -- -u \"{url_to_crawl}\" -o {os.getcwd()}/{specific_folder_name} -v -f -q specific -s \"{rules_string}\" >> {os.getcwd()}/{log_name}'
-                )
-                files = os.listdir(f"{os.getcwd()}/{specific_folder_name}")
-                for file in files:
-                    if tld_string in file:
-                        with open(log_name, "r") as f, mmap.mmap(
-                            f.fileno(), 0, access=mmap.ACCESS_READ
-                        ) as s:
-                            if (
-                                s.find(
-                                    b"---------------------------------------------------"
-                                )
-                                != -1
-                            ):
-                                crawl_succeeded = True
-                            break
-
-            if not crawl_succeeded:
-                # to_delete = f'{os.getcwd()}/{specific_folder_name}'
-                os.chdir(base_directory)
-                # if os.path.isdir(to_delete):
-                #   shutil.rmtree(to_delete, ignore_errors=True)
-                return
-
-        except (FileNotFoundError, OSError) as e:
-            error_found = True
-            output_folder_name = f"{url_to_crawl}"
-
-            error_site = f"{os.getcwd()}/{output_folder_name}"
-
-    cur_control_folder = 0
-    cur_control_attempts = 0
-    crawls_since_last_success = 0
-
-    folder_names = []
-
-    while cur_control_folder < 5 and cur_control_attempts < 12:
-        # print(os.getcwd())
-        print(
-            f"{tld_string} - Attempt {cur_control_attempts} / 12 - On folder {cur_control_folder}"
-        )
-        if cur_control_folder == 0 and cur_control_attempts == 5:
-            break
-
-        if crawls_since_last_success > 4:
-            break
-
-        cur_control_attempts += 1
-        crawls_since_last_success += 1
-        folder_name = f"control-data-{cur_control_folder}"
-        already_have_cur_control_folder = False
-
-        if os.path.isdir(f"{os.getcwd()}/{folder_name}"):
-            files = os.listdir(f"{os.getcwd()}/{folder_name}")
-            for file in files:
-                if tld_string in file:
-                    cur_control_folder += 1
-                    crawls_since_last_success = 0
-                    folder_names.append(folder_name)
-                    already_have_cur_control_folder = True
-                    print("Found control folder pre-existing")
-                    break
-
-        if already_have_cur_control_folder:
-            continue
-
-        # print(folder_name)
-        os.system(
-            f'npm run crawl -- -u "{url_to_crawl}" -o {os.getcwd()}/{folder_name} -v -f -q none >> {os.getcwd()}/{log_name}'
-        )
-        try:
-            files = os.listdir(f"{os.getcwd()}/{folder_name}")
-        except FileNotFoundError as e:
-            print(f"Error in running control crawl - {e}")
-            os.chdir(base_directory)
-
-            return
-        for file in files:
-            if tld_string in file:
-                cur_control_folder += 1
-                crawls_since_last_success = 0
-                folder_names.append(folder_name)
-                break
-
-    os.chdir(base_directory)
-    if error_found:
-        with open("specific-crawl-errors.txt", "a") as f:
-            f.write(f"{error_site}\n")
-
-    time.sleep(2)
-
+    os.system(
+        command
+    )
+    return
 
 def crawl_from_file(file):
     cur_folder = os.path.dirname(__file__)

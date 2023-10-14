@@ -6,3 +6,4 @@ summary.json
 venv
 __pycache__/
 *data/
+single_decoration.txt

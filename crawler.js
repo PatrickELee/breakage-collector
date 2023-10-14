@@ -7,6 +7,7 @@ const chalk = require('chalk').default;
 const { createTimer } = require('./helpers/timer');
 const wait = require('./helpers/wait');
 const tldts = require('tldts');
+const readline = require("readline");
 
 
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36';
@@ -183,10 +184,11 @@ async function getSiteData(context, url, {
   const requestTimes = new Array();
 
 
+
   await page.setRequestInterception(true);
   page.on('request', request => {
     numRequests += 1;
-    const initialTime = performance.now();
+    // const initialTime = performance.now();
 
     // console.log(request.url())
     // Remove ALL query parameters
@@ -360,25 +362,16 @@ async function getSiteData(context, url, {
         }
       }
       if (foundDecorationInLink) {
-        console.log('1a. Continuing request with ' + cur_url + ', original was ' + request.url());
         urlMaps.push([request.url(), cur_url]);
         numRequestsModified += 1;
-        console.log('1b. Continuing request with ' + cur_url + ', original was ' + request.url());
+        console.log('Continuing request with ' + cur_url + ', original was ' + request.url());
+        cur_url = "https://httpbin.org/anything";
       }
-      const finalTime = performance.now() - initialTime;
-      requestTimes.push(finalTime);
+      // const finalTime = performance.now() - initialTime;
+      // requestTimes.push(finalTime);
+      // request.continue({url: "https://httpbin.org/anything"});
       request.continue({ url: cur_url });
-      // console.log('2. Continuing request with ' + cur_url + ', original was ' + request.url());
-
-
-      // request.continue();
-      // } else {
-      //   request.continue();
-      // }
     } else {
-      // log('Blocking nothing')
-      // log(final_time)
-      // sleep(Math.floor(Math.random() * 4000))
       request.continue();
     }
   });
@@ -494,22 +487,22 @@ async function getSiteData(context, url, {
     await page.close();
   }
 
-  let pageFinalTime = performance.now() - pageInitTime;
+  // let pageFinalTime = performance.now() - pageInitTime;
 
   console.log("Number of requests: " + numRequests)
   console.log("Number of requests modified: " + numRequestsModified)
   console.log("Number of decorations: " + numDecorations)
   console.log("Number of decorations modified: " + numDecorationsModified)
-  console.log("Page total load time in milliseconds: " + pageFinalTime)
+  // console.log("Page total load time in milliseconds: " + pageFinalTime)
 
   // console.log("---------------------------------------------------")
   for (let pair of urlMaps) {
     console.log("Before: " + pair[0] + "\nAfter: " + pair[1])
     console.log("---------------------------------------------------")
   }
-  for (let time of requestTimes) {
-    console.log(time)
-  }
+  // for (let time of requestTimes) {
+  //   console.log(time)
+  // }
 
   return {
     initialUrl: url.toString(),
