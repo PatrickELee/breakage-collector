@@ -266,17 +266,17 @@ async function getSiteData(context, url, {
 
     }
 
-    else if (blockingMethod === 'specific') {
-      if (specificRequests.length == 0) {
-        request.continue();
-      }
+    else if (blockingMethod === 'specific' && specificRequests.length != 0) {
       let decorations = specificRequests.split(",");
       let cur_url = request.url();
+
+      // Remove ending / if it exists
       if (cur_url.charAt(cur_url.length - 1) == '/') {
         cur_url = cur_url.substring(0, cur_url.length - 1);
       }
 
-      let foundDecorationInLink = false
+      // Keep track if anywhere in our decoration loop we modify the request
+      let foundDecorationInLink = false;
 
       const countUrl = new URL(request.url());
       const countSearchParams = new URLSearchParams(countUrl.search);
@@ -284,88 +284,85 @@ async function getSiteData(context, url, {
       numDecorations += [...new Set(countSearchParams.keys())].length;
       numDecorations += cur_url.split('/').length - 3;
 
-      // console.log("Hello");
-      // console.log(decorations);
-
+      // Loop through each decoration that we are blocking to see if they exist in this request
       for (let decoration of decorations) {
-        // console.log(decoration);
         let separated = decoration.split("||");
-        if (countUrl.hostname.indexOf(url.host) === -1) {
-          // console.log(request.url);
-          if (cur_url.indexOf(separated[0]) != -1) {
-            if (separated.length === 2) {
-              // If: Is fragment
-              if (separated[1] === 'fragment') {
-                if (cur_url.indexOf('#') != -1) {
-                  console.log('Blocking specific request fragment for url ' + cur_url)
-                  cur_url = cur_url.split('#')[0];
-                  foundDecorationInLink = true;
-                  numDecorationsModified += 1;
 
-                }
+        if (countUrl.hostname.indexOf(url.host) !== -1 || cur_url.indexOf(separated[0]) == -1)
+          continue;
 
-                // Else: Is query parameter
-              } else {
-                const url = new URL(cur_url);
-                const searchParams = new URLSearchParams(url.search);
-                // console.log(searchParams);
-                // console.log(separated);
-                if (searchParams.has(separated[1])) {
-                  // console.log('Attempting to modify');
-                  searchParams.set(separated[1], 'TUVWXYZ');
-                  const new_url = new URL(`${url.origin}${url.pathname}?${searchParams}`);
-                  console.log('Blocking specific request query parameter for url ' + cur_url + ', changing to ' + new_url.href);
-                  cur_url = new_url.href;
-                  foundDecorationInLink = true;
-                  numDecorationsModified += 1;
+        if (separated[1] === 'fragment') {
+          console.log("Fragment");
+          if (cur_url.indexOf('#') != -1) {
+            console.log('Blocking specific request fragment for url ' + cur_url)
+            cur_url = cur_url.split('#')[0];
+            foundDecorationInLink = true;
+            numDecorationsModified += 1;
+            continue;
 
-                }
-              }
-              // Else: Is a path parameter
+          }
+
+            // Else: Is query parameter
+        } else if (separated.length === 2) {
+          console.log("Separated length 2")
+          const url = new URL(cur_url);
+          const searchParams = new URLSearchParams(url.search);
+          if (searchParams.has(separated[1])) {
+            searchParams.set(separated[1], 'TUVWXYZ');
+            const new_url = new URL(`${url.origin}${url.pathname}?${searchParams}`);
+            console.log('Blocking specific request query parameter for url ' + cur_url + ', changing to ' + new_url.href);
+            cur_url = new_url.href;
+            foundDecorationInLink = true;
+            numDecorationsModified += 1;
+            continue;
+          }
+
+          // Else: Is a path parameter
+        } else {
+          let splitRequestUrl = cur_url.split('/');
+
+          splitRequestUrl[splitRequestUrl.length - 1] = splitRequestUrl[splitRequestUrl.length - 1].split('?')[0];
+          let depth = Number(separated[2]);
+          if (splitRequestUrl.length - 3 <= depth) {
+            continue;
+          }
+          if (cur_url.indexOf(separated[0]) == -1 || splitRequestUrl.length < depth + 1) continue;
+          let newRequestUrl = '';
+          for (let i = 0; i < splitRequestUrl.length; i++) {
+            if (i > 0) {
+              newRequestUrl += '/';
+            }
+            if (i - 3 === depth) {
+              newRequestUrl += 'TUVWXYZ';
             } else {
-              let splitRequestUrl = cur_url.split('/');
-
-              splitRequestUrl[splitRequestUrl.length - 1] = splitRequestUrl[splitRequestUrl.length - 1].split('?')[0];
-              let depth = Number(separated[2]);
-              if (splitRequestUrl.length - 3 <= depth) {
-                continue;
-              }
-              if (cur_url.indexOf(separated[0]) != -1 && splitRequestUrl.length >= depth + 1) {
-                let newRequestUrl = '';
-                for (let i = 0; i < splitRequestUrl.length; i++) {
-                  if (i > 0) {
-                    newRequestUrl += '/';
-                  }
-                  if (i - 3 === depth) {
-                    newRequestUrl += 'TUVWXYZ';
-                  } else {
-                    newRequestUrl += splitRequestUrl[i];
-                  }
-                }
-                if (cur_url.indexOf('?') != -1) {
-                  newRequestUrl += '?';
-                  newRequestUrl += cur_url.split('?')[1];
-                }
-                console.log('Blocking specific request path parameter for url ' + cur_url + ', changing to ' + newRequestUrl)
-                cur_url = newRequestUrl;
-                foundDecorationInLink = true;
-                numDecorationsModified += 1;
-              }
+              newRequestUrl += splitRequestUrl[i];
             }
           }
+          if (cur_url.indexOf('?') != -1) {
+            newRequestUrl += '?';
+            newRequestUrl += cur_url.split('?')[1];
+          }
+          console.log('Blocking specific request path parameter for url ' + cur_url + ', changing to ' + newRequestUrl)
+          cur_url = newRequestUrl;
+          foundDecorationInLink = true;
+          numDecorationsModified += 1;
+          continue;
         }
       }
+
       if (foundDecorationInLink) {
         urlMaps.push([request.url(), cur_url]);
         numRequestsModified += 1;
         console.log('Continuing request with ' + cur_url + ', original was ' + request.url());
+        request.continue({ url: cur_url });
+        return;
+      } else {
+        request.continue();
+        return;
       }
-      // const finalTime = performance.now() - initialTime;
-      // requestTimes.push(finalTime);
-      // request.continue({url: "https://httpbin.org/anything"});
-      request.continue({ url: cur_url });
     } else {
       request.continue();
+      return;
     }
   });
 
