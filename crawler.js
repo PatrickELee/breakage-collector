@@ -290,12 +290,6 @@ async function getSiteData(context, url, {
       for (let decoration of decorations) {
         // console.log(decoration);
         let separated = decoration.split("||");
-        // console.log(separated);
-        // console.log(url.host);
-        // console.log("The request url is:")
-        // console.log(request.url());
-        // console.log("Bool value: ")
-        // console.log(request.url().indexOf(url.host) === -1);
         if (countUrl.hostname.indexOf(url.host) === -1) {
           // console.log(request.url);
           if (cur_url.indexOf(separated[0]) != -1) {
@@ -365,7 +359,6 @@ async function getSiteData(context, url, {
         urlMaps.push([request.url(), cur_url]);
         numRequestsModified += 1;
         console.log('Continuing request with ' + cur_url + ', original was ' + request.url());
-        cur_url = "https://httpbin.org/anything";
       }
       // const finalTime = performance.now() - initialTime;
       // requestTimes.push(finalTime);
