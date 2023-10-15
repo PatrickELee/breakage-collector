@@ -292,7 +292,6 @@ async function getSiteData(context, url, {
           continue;
 
         if (separated[1] === 'fragment') {
-          console.log("Fragment");
           if (cur_url.indexOf('#') != -1) {
             console.log('Blocking specific request fragment for url ' + cur_url)
             cur_url = cur_url.split('#')[0];
@@ -304,7 +303,6 @@ async function getSiteData(context, url, {
 
             // Else: Is query parameter
         } else if (separated.length === 2) {
-          console.log("Separated length 2")
           const url = new URL(cur_url);
           const searchParams = new URLSearchParams(url.search);
           if (searchParams.has(separated[1])) {
